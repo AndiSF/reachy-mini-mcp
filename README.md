@@ -40,6 +40,28 @@ uv run reachy-mini-mcp
 
 ### Client configuration
 
+The schema differs per client. Both examples below launch the same process.
+
+OpenClaw, in `~/.openclaw/openclaw.json`:
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "reachy-mini": {
+        "command": "uv",
+        "args": ["run", "reachy-mini-mcp"],
+        "cwd": "/absolute/path/to/reachy-mini-mcp",
+        "timeout": 10
+      }
+    }
+  }
+}
+```
+
+Clients using the `mcpServers` schema, such as Claude Desktop, where the
+working directory is passed to `uv` instead:
+
 ```json
 {
   "mcpServers": {
@@ -50,6 +72,11 @@ uv run reachy-mini-mcp
   }
 }
 ```
+
+Keep any client-side timeout above `REACHY_MINI_TIMEOUT` (see below). The
+server is then the one that gives up first, so an unresponsive daemon comes
+back as a `reachable: false` result the client can explain, rather than as a
+timeout the client cannot attribute.
 
 ## Configuration
 

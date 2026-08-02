@@ -1,0 +1,107 @@
+# reachy-mini-mcp
+
+An [MCP](https://modelcontextprotocol.io) server that exposes the
+[Reachy Mini](https://huggingface.co/docs/reachy_mini) daemon to MCP clients.
+
+The server talks to the daemon over its
+[REST API](https://huggingface.co/docs/reachy_mini/API/rest-api) only — the
+Python SDK is deliberately not a dependency.
+
+## Status
+
+Early work in progress. One tool is implemented:
+
+| Tool                | Purpose                                                  |
+| ------------------- | -------------------------------------------------------- |
+| `get_daemon_status` | Report whether the daemon is reachable and the robot ready |
+
+## Requirements
+
+- Python 3.12
+- A running Reachy Mini daemon (tested against v1.9.0), reachable over HTTP
+- [uv](https://docs.astral.sh/uv/) for dependency management
+
+## Installation
+
+```bash
+git clone <repository-url> reachy-mini-mcp
+cd reachy-mini-mcp
+uv sync
+```
+
+## Usage
+
+The server speaks MCP over stdio and is normally started by an MCP client
+rather than by hand:
+
+```bash
+uv run reachy-mini-mcp
+```
+
+### Client configuration
+
+```json
+{
+  "mcpServers": {
+    "reachy-mini": {
+      "command": "uv",
+      "args": ["--directory", "/absolute/path/to/reachy-mini-mcp", "run", "reachy-mini-mcp"]
+    }
+  }
+}
+```
+
+## Configuration
+
+Both variables are optional.
+
+| Variable                  | Default                 | Meaning                          |
+| ------------------------- | ----------------------- | -------------------------------- |
+| `REACHY_MINI_DAEMON_URL`  | `http://localhost:8000` | Base URL of the daemon REST API  |
+| `REACHY_MINI_TIMEOUT`     | `5.0`                   | HTTP request timeout in seconds  |
+
+Invalid values raise on startup rather than being silently ignored.
+
+## Tools
+
+### `get_daemon_status`
+
+Takes no arguments. Returns:
+
+| Field        | Type            | Meaning                                                                                  |
+| ------------ | --------------- | ---------------------------------------------------------------------------------------- |
+| `reachable`  | `bool`          | The daemon process answered on its HTTP port                                             |
+| `is_ready`   | `bool`          | The robot backend is running and can accept commands                                     |
+| `state`      | `str \| null`   | `not_initialized`, `starting`, `running`, `stopping`, `stopped` or `error`                |
+| `robot_name` | `str \| null`   | Configured robot name                                                                    |
+| `version`    | `str \| null`   | Daemon version                                                                           |
+| `error`      | `str \| null`   | Error reported by the daemon, or by this lookup when it failed                            |
+
+`reachable` and `is_ready` are separate on purpose: the daemon process can be
+up and answering while the robot backend is stopped, in which case the robot
+will not move until the backend is started.
+
+An unreachable daemon is reported as `reachable: false` with an `error` message
+instead of raising, so the client can relay the situation to the user.
+
+## Development
+
+```bash
+uv sync          # install dependencies, including the dev group
+uv run pytest    # run the test suite
+```
+
+The tests mock the daemon's HTTP API, so no robot or running daemon is needed.
+
+## Layout
+
+```
+src/reachy_mini_mcp/
+├── client.py     # async REST client for the daemon; knows nothing about MCP
+├── server.py     # FastMCP instance, tool definitions and result mapping
+└── __main__.py   # stdio entrypoint
+```
+
+## License
+
+MIT

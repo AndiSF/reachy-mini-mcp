@@ -6,12 +6,12 @@ import httpx
 import pytest
 import respx
 
-from reachy_mini_mcp.client import (
+from reachy_mini_mcp.client import STATUS_PATH
+from reachy_mini_mcp.config import (
     DEFAULT_BASE_URL,
     DEFAULT_TIMEOUT_SECONDS,
-    STATUS_PATH,
     TIMEOUT_ENV,
-    DaemonClientConfig,
+    Settings,
 )
 from reachy_mini_mcp.server import get_daemon_status
 
@@ -87,11 +87,11 @@ def test_FromEnv_WhenNoOverrides_UsesDefaults(monkeypatch):
     monkeypatch.delenv(TIMEOUT_ENV, raising=False)
 
     # Act
-    config = DaemonClientConfig.from_env()
+    settings = Settings.from_env()
 
     # Assert
-    assert config.base_url == DEFAULT_BASE_URL
-    assert config.timeout_seconds == DEFAULT_TIMEOUT_SECONDS
+    assert settings.base_url == DEFAULT_BASE_URL
+    assert settings.timeout_seconds == DEFAULT_TIMEOUT_SECONDS
 
 
 def test_FromEnv_WhenTimeoutNotANumber_RaisesValueError(monkeypatch):
@@ -100,4 +100,4 @@ def test_FromEnv_WhenTimeoutNotANumber_RaisesValueError(monkeypatch):
 
     # Act / Assert
     with pytest.raises(ValueError, match=TIMEOUT_ENV):
-        DaemonClientConfig.from_env()
+        Settings.from_env()

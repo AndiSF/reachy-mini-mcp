@@ -8,15 +8,14 @@ import httpx
 from mcp.server.mcpserver import MCPServer
 
 from . import __version__
-from .client import DaemonClient, DaemonClientConfig, DaemonUnreachableError
-
-SERVER_NAME = "reachy-mini"
+from .client import DaemonClient, DaemonUnreachableError
+from .config import SERVER_NAME, Settings
 
 # The daemon reports this state once the robot backend is fully operational.
 READY_STATE = "running"
 
 mcp = MCPServer(SERVER_NAME, version=__version__)
-_client = DaemonClient(DaemonClientConfig.from_env())
+_client = DaemonClient(Settings.from_env())
 
 
 def build_status_result(raw: dict[str, Any]) -> dict[str, Any]:

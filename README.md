@@ -89,6 +89,9 @@ Both variables are optional.
 
 Invalid values raise on startup rather than being silently ignored.
 
+Defaults, variable names and their parsing all live in
+`src/reachy_mini_mcp/config.py`.
+
 ## Tools
 
 ### `get_daemon_status`

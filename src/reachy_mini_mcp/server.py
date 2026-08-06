@@ -15,7 +15,18 @@ from .config import SERVER_NAME, Settings
 READY_STATE = "running"
 
 mcp = MCPServer(SERVER_NAME, version=__version__)
-_client = DaemonClient(Settings.from_env())
+_client = DaemonClient()
+
+
+def configure(settings: Settings) -> None:
+    """Point the tools at the daemon described by ``settings``.
+
+    Called by the entrypoint before the server runs. Resolving settings there
+    rather than at import time keeps a configuration error reportable: the
+    entrypoint can turn it into a readable message instead of a traceback.
+    """
+    global _client
+    _client = DaemonClient(settings)
 
 
 def build_status_result(raw: dict[str, Any]) -> dict[str, Any]:

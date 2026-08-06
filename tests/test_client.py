@@ -6,6 +6,7 @@ import httpx
 import pytest
 import respx
 
+from reachy_mini_mcp.__main__ import CONFIG_ERROR_EXIT_CODE, main
 from reachy_mini_mcp.client import STATUS_PATH
 from reachy_mini_mcp.config import (
     DEFAULT_BASE_URL,
@@ -101,3 +102,19 @@ def test_FromEnv_WhenTimeoutNotANumber_RaisesValueError(monkeypatch):
     # Act / Assert
     with pytest.raises(ValueError, match=TIMEOUT_ENV):
         Settings.from_env()
+
+
+def test_Main_WhenTimeoutInvalid_ExitsWithMessageOnStderr(monkeypatch, capsys):
+    # Arrange
+    monkeypatch.setenv(TIMEOUT_ENV, "soon")
+
+    # Act
+    with pytest.raises(SystemExit) as exit_info:
+        main()
+
+    # Assert
+    assert exit_info.value.code == CONFIG_ERROR_EXIT_CODE
+    captured = capsys.readouterr()
+    assert TIMEOUT_ENV in captured.err
+    assert "soon" in captured.err
+    assert captured.out == ""

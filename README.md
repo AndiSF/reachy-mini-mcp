@@ -87,7 +87,25 @@ Both variables are optional.
 | `REACHY_MINI_DAEMON_URL`  | `http://localhost:8000` | Base URL of the daemon REST API  |
 | `REACHY_MINI_TIMEOUT`     | `5.0`                   | HTTP request timeout in seconds  |
 
-Invalid values raise on startup rather than being silently ignored.
+Set them in the `env` block of the server entry, next to `command` and `args`:
+
+```json
+"reachy-mini": {
+  "command": "uv",
+  "args": ["--directory", "/absolute/path/to/reachy-mini-mcp", "run", "reachy-mini-mcp"],
+  "env": {
+    "REACHY_MINI_DAEMON_URL": "http://reachy.local:8000"
+  }
+}
+```
+
+Exporting the variables in a shell is not enough. The client starts the server
+as a child process, often with a sanitised environment that drops them.
+
+An invalid value is reported on stderr and the server exits with code 2 rather
+than starting with a setting it cannot honour. Clients write the server's
+stderr to their own log file, which is where that message appears; the client
+UI itself usually reports no more than a failed start.
 
 Defaults, variable names and their parsing all live in
 `src/reachy_mini_mcp/config.py`.

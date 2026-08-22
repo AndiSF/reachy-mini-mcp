@@ -7,13 +7,13 @@ import pytest
 import respx
 
 from reachy_mini_mcp.__main__ import CONFIG_ERROR_EXIT_CODE, main
-from reachy_mini_mcp.client import STATUS_PATH
 from reachy_mini_mcp.config import (
     DEFAULT_BASE_URL,
     DEFAULT_TIMEOUT_SECONDS,
     TIMEOUT_ENV,
     Settings,
 )
+from reachy_mini_mcp.daemon import STATUS_PATH
 from reachy_mini_mcp.server import get_daemon_status
 
 STATUS_URL = f"{DEFAULT_BASE_URL}{STATUS_PATH}"
@@ -81,6 +81,17 @@ async def test_GetStatus_WhenDaemonUnreachable_ReturnsUnreachableWithError():
     assert result["is_ready"] is False
     assert result["state"] is None
     assert "not reachable" in result["error"]
+
+
+@respx.mock
+async def test_GetStatus_WhenDaemonReturnsServerError_ReportsReachableWithStatus():
+    respx.get(STATUS_URL).mock(return_value=httpx.Response(500))
+
+    result = await get_daemon_status()
+
+    assert result["reachable"] is True
+    assert result["is_ready"] is False
+    assert result["error"] == "Daemon returned HTTP 500"
 
 
 def test_FromEnv_WhenNoOverrides_UsesDefaults(monkeypatch):

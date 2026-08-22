@@ -4,12 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-import httpx
 from mcp.server.mcpserver import MCPServer
 
 from . import __version__
-from .client import DaemonClient, DaemonUnreachableError
 from .config import SERVER_NAME, Settings
+from .daemon import DaemonClient, DaemonResponseError, DaemonUnreachableError
 
 # The daemon reports this state once the robot backend is fully operational.
 READY_STATE = "running"
@@ -81,10 +80,10 @@ async def get_daemon_status() -> dict[str, Any]:
             reachable=False,
             error=f"Daemon is not reachable: {exc}",
         )
-    except httpx.HTTPStatusError as exc:
+    except DaemonResponseError as exc:
         return build_error_result(
             reachable=True,
-            error=f"Daemon returned HTTP {exc.response.status_code}",
+            error=f"Daemon returned HTTP {exc.status_code}",
         )
 
     return build_status_result(raw)

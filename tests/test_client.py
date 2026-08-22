@@ -34,7 +34,7 @@ def build_daemon_payload(state: str) -> dict:
 
 
 @respx.mock
-async def test_GetStatus_WhenDaemonRunning_ReturnsReadyStatus():
+async def test_get_status_when_daemon_running_returns_ready_status():
     # Arrange
     respx.get(STATUS_URL).mock(
         return_value=httpx.Response(200, json=build_daemon_payload("running"))
@@ -53,7 +53,7 @@ async def test_GetStatus_WhenDaemonRunning_ReturnsReadyStatus():
 
 
 @respx.mock
-async def test_GetStatus_WhenDaemonStopped_ReturnsNotReady():
+async def test_get_status_when_daemon_stopped_returns_not_ready():
     # Arrange
     respx.get(STATUS_URL).mock(
         return_value=httpx.Response(200, json=build_daemon_payload("stopped"))
@@ -69,7 +69,7 @@ async def test_GetStatus_WhenDaemonStopped_ReturnsNotReady():
 
 
 @respx.mock
-async def test_GetStatus_WhenDaemonUnreachable_ReturnsUnreachableWithError():
+async def test_get_status_when_daemon_unreachable_returns_unreachable_with_error():
     # Arrange
     respx.get(STATUS_URL).mock(side_effect=httpx.ConnectError("connection refused"))
 
@@ -84,7 +84,7 @@ async def test_GetStatus_WhenDaemonUnreachable_ReturnsUnreachableWithError():
 
 
 @respx.mock
-async def test_GetStatus_WhenDaemonReturnsServerError_ReportsReachableWithStatus():
+async def test_get_status_when_daemon_http_error_reports_reachable_with_status():
     respx.get(STATUS_URL).mock(return_value=httpx.Response(500))
 
     result = await get_daemon_status()
@@ -94,7 +94,7 @@ async def test_GetStatus_WhenDaemonReturnsServerError_ReportsReachableWithStatus
     assert result["error"] == "Daemon returned HTTP 500"
 
 
-def test_FromEnv_WhenNoOverrides_UsesDefaults(monkeypatch):
+def test_from_env_when_no_overrides_uses_defaults(monkeypatch):
     # Arrange
     monkeypatch.delenv(TIMEOUT_ENV, raising=False)
 
@@ -106,7 +106,7 @@ def test_FromEnv_WhenNoOverrides_UsesDefaults(monkeypatch):
     assert settings.timeout_seconds == DEFAULT_TIMEOUT_SECONDS
 
 
-def test_FromEnv_WhenTimeoutNotANumber_RaisesValueError(monkeypatch):
+def test_from_env_when_timeout_not_a_number_raises_value_error(monkeypatch):
     # Arrange
     monkeypatch.setenv(TIMEOUT_ENV, "soon")
 
@@ -115,7 +115,7 @@ def test_FromEnv_WhenTimeoutNotANumber_RaisesValueError(monkeypatch):
         Settings.from_env()
 
 
-def test_Main_WhenTimeoutInvalid_ExitsWithMessageOnStderr(monkeypatch, capsys):
+def test_main_when_timeout_invalid_exits_with_message_on_stderr(monkeypatch, capsys):
     # Arrange
     monkeypatch.setenv(TIMEOUT_ENV, "soon")
 

@@ -37,7 +37,5 @@ asyncio_mode = "auto"
 select = ["E", "W", "F", "I", "N", "UP", "ANN", "B", "SIM", "PT", "RUF"]
 
 [tool.ruff.lint.per-file-ignores]
-# Test names currently follow {Method}_{Condition}_{ExpectedBehavior}, which
-# is not snake_case; they are to be renamed to Python style later. A test's
-# name already carries its meaning, so return annotations would add nothing.
-"tests/*" = ["N802", "ANN"]
+# A test's name already carries its meaning, so return annotations would add nothing
+"tests/*" = ["ANN"]

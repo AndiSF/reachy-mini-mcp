@@ -7,13 +7,13 @@ import pytest
 import respx
 
 from reachy_mini_mcp.__main__ import CONFIG_ERROR_EXIT_CODE, main
-from reachy_mini_mcp.client import STATUS_PATH
 from reachy_mini_mcp.config import (
     DEFAULT_BASE_URL,
     DEFAULT_TIMEOUT_SECONDS,
     TIMEOUT_ENV,
     Settings,
 )
+from reachy_mini_mcp.daemon import STATUS_PATH
 from reachy_mini_mcp.server import get_daemon_status
 
 STATUS_URL = f"{DEFAULT_BASE_URL}{STATUS_PATH}"

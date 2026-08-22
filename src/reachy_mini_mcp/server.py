@@ -8,8 +8,8 @@ import httpx
 from mcp.server.mcpserver import MCPServer
 
 from . import __version__
-from .client import DaemonClient, DaemonUnreachableError
 from .config import SERVER_NAME, Settings
+from .daemon import DaemonClient, DaemonUnreachableError
 
 # The daemon reports this state once the robot backend is fully operational.
 READY_STATE = "running"

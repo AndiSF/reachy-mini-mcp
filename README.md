@@ -145,7 +145,7 @@ The tests mock the daemon's HTTP API, so no robot or running daemon is needed.
 
 ```
 src/reachy_mini_mcp/
-├── client.py     # async REST client for the daemon; knows nothing about MCP
+├── daemon.py     # async REST client for the daemon; knows nothing about MCP
 ├── server.py     # FastMCP instance, tool definitions and result mapping
 └── __main__.py   # stdio entrypoint
 ```

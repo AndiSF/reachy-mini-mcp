@@ -1,4 +1,9 @@
-"""Tests for the daemon status lookup, with the daemon's HTTP API mocked."""
+"""Tests for the daemon status tool, its configuration and the entrypoint.
+
+The daemon's HTTP API is mocked throughout, so no robot or running daemon is
+needed. Tests are grouped by the unit under test; the class name carries the
+subject so each method name only has to state a condition and its outcome.
+"""
 
 from __future__ import annotations
 
@@ -33,99 +38,107 @@ def build_daemon_payload(state: str) -> dict:
     }
 
 
-@respx.mock
-async def test_get_status_when_daemon_running_returns_ready_status():
-    # Arrange
-    respx.get(STATUS_URL).mock(
-        return_value=httpx.Response(200, json=build_daemon_payload("running"))
-    )
+class TestGetDaemonStatus:
+    """The MCP tool reporting daemon reachability and robot readiness."""
 
-    # Act
-    result = await get_daemon_status()
+    @respx.mock
+    async def test_running_daemon_is_ready(self):
+        # Arrange
+        respx.get(STATUS_URL).mock(
+            return_value=httpx.Response(200, json=build_daemon_payload("running"))
+        )
 
-    # Assert
-    assert result["reachable"] is True
-    assert result["is_ready"] is True
-    assert result["state"] == "running"
-    assert result["robot_name"] == "reachy_mini"
-    assert result["version"] == "1.9.0"
-    assert result["error"] is None
+        # Act
+        result = await get_daemon_status()
 
+        # Assert
+        assert result["reachable"] is True
+        assert result["is_ready"] is True
+        assert result["state"] == "running"
+        assert result["robot_name"] == "reachy_mini"
+        assert result["version"] == "1.9.0"
+        assert result["error"] is None
 
-@respx.mock
-async def test_get_status_when_daemon_stopped_returns_not_ready():
-    # Arrange
-    respx.get(STATUS_URL).mock(
-        return_value=httpx.Response(200, json=build_daemon_payload("stopped"))
-    )
+    @respx.mock
+    async def test_stopped_daemon_is_not_ready(self):
+        # Arrange
+        respx.get(STATUS_URL).mock(
+            return_value=httpx.Response(200, json=build_daemon_payload("stopped"))
+        )
 
-    # Act
-    result = await get_daemon_status()
+        # Act
+        result = await get_daemon_status()
 
-    # Assert
-    assert result["reachable"] is True
-    assert result["is_ready"] is False
-    assert result["state"] == "stopped"
+        # Assert
+        assert result["reachable"] is True
+        assert result["is_ready"] is False
+        assert result["state"] == "stopped"
 
+    @respx.mock
+    async def test_unreachable_daemon_reports_error(self):
+        # Arrange
+        respx.get(STATUS_URL).mock(side_effect=httpx.ConnectError("connection refused"))
 
-@respx.mock
-async def test_get_status_when_daemon_unreachable_returns_unreachable_with_error():
-    # Arrange
-    respx.get(STATUS_URL).mock(side_effect=httpx.ConnectError("connection refused"))
+        # Act
+        result = await get_daemon_status()
 
-    # Act
-    result = await get_daemon_status()
+        # Assert
+        assert result["reachable"] is False
+        assert result["is_ready"] is False
+        assert result["state"] is None
+        assert "not reachable" in result["error"]
 
-    # Assert
-    assert result["reachable"] is False
-    assert result["is_ready"] is False
-    assert result["state"] is None
-    assert "not reachable" in result["error"]
+    @respx.mock
+    async def test_http_error_keeps_daemon_reachable(self):
+        # Arrange
+        respx.get(STATUS_URL).mock(return_value=httpx.Response(500))
 
+        # Act
+        result = await get_daemon_status()
 
-@respx.mock
-async def test_get_status_when_daemon_http_error_reports_reachable_with_status():
-    respx.get(STATUS_URL).mock(return_value=httpx.Response(500))
-
-    result = await get_daemon_status()
-
-    assert result["reachable"] is True
-    assert result["is_ready"] is False
-    assert result["error"] == "Daemon returned HTTP 500"
-
-
-def test_from_env_when_no_overrides_uses_defaults(monkeypatch):
-    # Arrange
-    monkeypatch.delenv(TIMEOUT_ENV, raising=False)
-
-    # Act
-    settings = Settings.from_env()
-
-    # Assert
-    assert settings.base_url == DEFAULT_BASE_URL
-    assert settings.timeout_seconds == DEFAULT_TIMEOUT_SECONDS
+        # Assert
+        assert result["reachable"] is True
+        assert result["is_ready"] is False
+        assert result["error"] == "Daemon returned HTTP 500"
 
 
-def test_from_env_when_timeout_not_a_number_raises_value_error(monkeypatch):
-    # Arrange
-    monkeypatch.setenv(TIMEOUT_ENV, "soon")
+class TestSettingsFromEnv:
+    """Resolving settings from environment variables."""
 
-    # Act / Assert
-    with pytest.raises(ValueError, match=TIMEOUT_ENV):
-        Settings.from_env()
+    def test_uses_defaults_without_overrides(self, monkeypatch):
+        # Arrange
+        monkeypatch.delenv(TIMEOUT_ENV, raising=False)
+
+        # Act
+        settings = Settings.from_env()
+
+        # Assert
+        assert settings.base_url == DEFAULT_BASE_URL
+        assert settings.timeout_seconds == DEFAULT_TIMEOUT_SECONDS
+
+    def test_rejects_non_numeric_timeout(self, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(TIMEOUT_ENV, "soon")
+
+        # Act / Assert
+        with pytest.raises(ValueError, match=TIMEOUT_ENV):
+            Settings.from_env()
 
 
-def test_main_when_timeout_invalid_exits_with_message_on_stderr(monkeypatch, capsys):
-    # Arrange
-    monkeypatch.setenv(TIMEOUT_ENV, "soon")
+class TestMain:
+    """The stdio entrypoint."""
 
-    # Act
-    with pytest.raises(SystemExit) as exit_info:
-        main()
+    def test_exits_with_config_error_on_stderr(self, monkeypatch, capsys):
+        # Arrange
+        monkeypatch.setenv(TIMEOUT_ENV, "soon")
 
-    # Assert
-    assert exit_info.value.code == CONFIG_ERROR_EXIT_CODE
-    captured = capsys.readouterr()
-    assert TIMEOUT_ENV in captured.err
-    assert "soon" in captured.err
-    assert captured.out == ""
+        # Act
+        with pytest.raises(SystemExit) as exit_info:
+            main()
+
+        # Assert
+        assert exit_info.value.code == CONFIG_ERROR_EXIT_CODE
+        captured = capsys.readouterr()
+        assert TIMEOUT_ENV in captured.err
+        assert "soon" in captured.err
+        assert captured.out == ""

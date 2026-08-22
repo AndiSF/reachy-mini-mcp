@@ -83,6 +83,17 @@ async def test_GetStatus_WhenDaemonUnreachable_ReturnsUnreachableWithError():
     assert "not reachable" in result["error"]
 
 
+@respx.mock
+async def test_GetStatus_WhenDaemonReturnsServerError_ReportsReachableWithStatus():
+    respx.get(STATUS_URL).mock(return_value=httpx.Response(500))
+
+    result = await get_daemon_status()
+
+    assert result["reachable"] is True
+    assert result["is_ready"] is False
+    assert result["error"] == "Daemon returned HTTP 500"
+
+
 def test_FromEnv_WhenNoOverrides_UsesDefaults(monkeypatch):
     # Arrange
     monkeypatch.delenv(TIMEOUT_ENV, raising=False)

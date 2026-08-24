@@ -1,11 +1,8 @@
 """MCP server exposing Reachy Mini daemon operations as tools."""
 
 from __future__ import annotations
-
 from typing import Any, TypedDict
-
 from mcp.server.mcpserver import MCPServer
-
 from . import __version__
 from .config import SERVER_NAME, Settings
 from .daemon_gateway import (

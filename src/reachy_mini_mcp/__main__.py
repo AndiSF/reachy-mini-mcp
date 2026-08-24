@@ -1,9 +1,7 @@
 """Entrypoint running the MCP server over stdio."""
 
 from __future__ import annotations
-
 import sys
-
 from .config import SERVER_NAME, Settings
 from .server import create_server
 

@@ -1,13 +1,10 @@
 """Tests for the daemon status MCP tool."""
 
 from __future__ import annotations
-
 from typing import Any
-
 import httpx
 import respx
 from mcp.types import CallToolResult
-
 from reachy_mini_mcp.config import DEFAULT_BASE_URL, Settings
 from reachy_mini_mcp.daemon_gateway import STATUS_PATH
 from reachy_mini_mcp.server import create_server

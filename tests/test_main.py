@@ -1,9 +1,7 @@
 """Tests for the stdio entrypoint."""
 
 from __future__ import annotations
-
 import pytest
-
 from reachy_mini_mcp.__main__ import CONFIG_ERROR_EXIT_CODE, main
 from reachy_mini_mcp.config import TIMEOUT_ENV
 

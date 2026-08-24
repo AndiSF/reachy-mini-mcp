@@ -9,7 +9,7 @@ import respx
 from mcp.types import CallToolResult
 
 from reachy_mini_mcp.config import DEFAULT_BASE_URL, Settings
-from reachy_mini_mcp.daemon import STATUS_PATH
+from reachy_mini_mcp.daemon_gateway import STATUS_PATH
 from reachy_mini_mcp.server import create_server
 
 STATUS_URL = f"{DEFAULT_BASE_URL}{STATUS_PATH}"

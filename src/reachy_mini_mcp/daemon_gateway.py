@@ -1,6 +1,6 @@
-"""Async HTTP client for the Reachy Mini daemon REST API.
+"""Gateway to the Reachy Mini daemon REST API.
 
-This module knows nothing about MCP. It is a thin, typed wrapper around the
+This module knows nothing about MCP. It provides a typed boundary around the
 daemon's HTTP endpoints so the MCP layer can stay free of transport concerns.
 """
 
@@ -28,8 +28,8 @@ class DaemonResponseError(Exception):
         self.status_code = status_code
 
 
-class DaemonClient:
-    """Talks to the Reachy Mini daemon over HTTP."""
+class DaemonGateway:
+    """Provide access to the Reachy Mini daemon operations."""
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings

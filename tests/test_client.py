@@ -7,6 +7,8 @@ subject so each method name only has to state a condition and its outcome.
 
 from __future__ import annotations
 
+from typing import Any
+
 import httpx
 import pytest
 import respx
@@ -19,9 +21,10 @@ from reachy_mini_mcp.config import (
     Settings,
 )
 from reachy_mini_mcp.daemon import STATUS_PATH
-from reachy_mini_mcp.server import get_daemon_status
+from reachy_mini_mcp.server import create_server
 
 STATUS_URL = f"{DEFAULT_BASE_URL}{STATUS_PATH}"
+CUSTOM_BASE_URL = "http://reachy.test:9000"
 
 
 def build_daemon_payload(state: str) -> dict:
@@ -38,6 +41,14 @@ def build_daemon_payload(state: str) -> dict:
     }
 
 
+async def call_daemon_status_tool(settings: Settings) -> dict[str, Any]:
+    """Call the daemon status tool through its public MCP interface."""
+    server = create_server(settings)
+    result = await server.call_tool("get_daemon_status", {})
+    assert result.structured_content is not None
+    return result.structured_content
+
+
 class TestGetDaemonStatus:
     """The MCP tool reporting daemon reachability and robot readiness."""
 
@@ -49,7 +60,7 @@ class TestGetDaemonStatus:
         )
 
         # Act
-        result = await get_daemon_status()
+        result = await call_daemon_status_tool(Settings())
 
         # Assert
         assert result["reachable"] is True
@@ -67,7 +78,7 @@ class TestGetDaemonStatus:
         )
 
         # Act
-        result = await get_daemon_status()
+        result = await call_daemon_status_tool(Settings())
 
         # Assert
         assert result["reachable"] is True
@@ -80,7 +91,7 @@ class TestGetDaemonStatus:
         respx.get(STATUS_URL).mock(side_effect=httpx.ConnectError("connection refused"))
 
         # Act
-        result = await get_daemon_status()
+        result = await call_daemon_status_tool(Settings())
 
         # Assert
         assert result["reachable"] is False
@@ -94,12 +105,29 @@ class TestGetDaemonStatus:
         respx.get(STATUS_URL).mock(return_value=httpx.Response(500))
 
         # Act
-        result = await get_daemon_status()
+        result = await call_daemon_status_tool(Settings())
 
         # Assert
         assert result["reachable"] is True
         assert result["is_ready"] is False
         assert result["error"] == "Daemon returned HTTP 500"
+
+    @respx.mock
+    async def test_custom_base_url_is_used(self):
+        # Arrange
+        settings = Settings(base_url=CUSTOM_BASE_URL)
+        route = respx.get(f"{CUSTOM_BASE_URL}{STATUS_PATH}").mock(
+            return_value=httpx.Response(
+                200,
+                json=build_daemon_payload("running"),
+            )
+        )
+
+        # Act
+        await call_daemon_status_tool(settings)
+
+        # Assert
+        assert route.called
 
 
 class TestSettingsFromEnv:

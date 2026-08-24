@@ -31,8 +31,8 @@ class DaemonResponseError(Exception):
 class DaemonClient:
     """Talks to the Reachy Mini daemon over HTTP."""
 
-    def __init__(self, settings: Settings | None = None) -> None:
-        self._settings = settings or Settings()
+    def __init__(self, settings: Settings) -> None:
+        self._settings = settings
 
     async def get_status(self) -> dict[str, Any]:
         """Return the raw daemon status payload.

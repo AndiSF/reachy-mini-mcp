@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 
 from .config import SERVER_NAME, Settings
-from .server import configure, mcp
+from .server import create_server
 
 # Exit code used when the server refuses to start because of bad configuration.
 CONFIG_ERROR_EXIT_CODE = 2
@@ -29,7 +29,7 @@ def main() -> None:
         )
         raise SystemExit(CONFIG_ERROR_EXIT_CODE) from exc
 
-    configure(settings)
+    mcp = create_server(settings)
     mcp.run(transport="stdio")
 
 

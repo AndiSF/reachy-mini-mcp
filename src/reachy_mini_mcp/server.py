@@ -13,20 +13,6 @@ from .daemon import DaemonClient, DaemonResponseError, DaemonUnreachableError
 # The daemon reports this state once the robot backend is fully operational.
 READY_STATE = "running"
 
-mcp = MCPServer(SERVER_NAME, version=__version__)
-_client = DaemonClient()
-
-
-def configure(settings: Settings) -> None:
-    """Point the tools at the daemon described by ``settings``.
-
-    Called by the entrypoint before the server runs. Resolving settings there
-    rather than at import time keeps a configuration error reportable: the
-    entrypoint can turn it into a readable message instead of a traceback.
-    """
-    global _client
-    _client = DaemonClient(settings)
-
 
 def build_status_result(raw: dict[str, Any]) -> dict[str, Any]:
     """Reduce a raw daemon status payload to the fields a caller acts on."""
@@ -57,33 +43,40 @@ def build_error_result(*, reachable: bool, error: str) -> dict[str, Any]:
     }
 
 
-@mcp.tool()
-async def get_daemon_status() -> dict[str, Any]:
-    """Check whether the Reachy Mini daemon is reachable and the robot is ready.
+def create_server(settings: Settings) -> MCPServer:
+    """Create an MCP server configured for one daemon."""
+    mcp = MCPServer(SERVER_NAME, version=__version__)
+    client = DaemonClient(settings)
 
-    Returns a dict with:
-      reachable  - the daemon process answered on its HTTP port
-      is_ready   - the robot backend is running and can accept commands
-      state      - daemon state: not_initialized, starting, running, stopping,
-                   stopped or error (null when unreachable)
-      robot_name - configured robot name
-      version    - daemon version
-      error      - error message from the daemon or from this lookup, else null
+    @mcp.tool()
+    async def get_daemon_status() -> dict[str, Any]:
+        """Check whether the Reachy Mini daemon is reachable and the robot is ready.
 
-    A daemon that is reachable but not ready means the process is up while the
-    robot backend is stopped; the robot will not move until it is started.
-    """
-    try:
-        raw = await _client.get_status()
-    except DaemonUnreachableError as exc:
-        return build_error_result(
-            reachable=False,
-            error=f"Daemon is not reachable: {exc}",
-        )
-    except DaemonResponseError as exc:
-        return build_error_result(
-            reachable=True,
-            error=f"Daemon returned HTTP {exc.status_code}",
-        )
+        Returns a dict with:
+          reachable  - the daemon process answered on its HTTP port
+          is_ready   - the robot backend is running and can accept commands
+          state      - daemon state: not_initialized, starting, running, stopping,
+                       stopped or error (null when unreachable)
+          robot_name - configured robot name
+          version    - daemon version
+          error      - error message from the daemon or from this lookup, else null
 
-    return build_status_result(raw)
+        A daemon that is reachable but not ready means the process is up while the
+        robot backend is stopped; the robot will not move until it is started.
+        """
+        try:
+            raw = await client.get_status()
+        except DaemonUnreachableError as exc:
+            return build_error_result(
+                reachable=False,
+                error=f"Daemon is not reachable: {exc}",
+            )
+        except DaemonResponseError as exc:
+            return build_error_result(
+                reachable=True,
+                error=f"Daemon returned HTTP {exc.status_code}",
+            )
+
+        return build_status_result(raw)
+
+    return mcp

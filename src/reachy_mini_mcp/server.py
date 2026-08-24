@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TypedDict
 
 from mcp.server.mcpserver import MCPServer
 
@@ -14,7 +14,18 @@ from .daemon import DaemonClient, DaemonResponseError, DaemonUnreachableError
 READY_STATE = "running"
 
 
-def build_status_result(raw: dict[str, Any]) -> dict[str, Any]:
+class DaemonStatusResult(TypedDict):
+    """Status information exposed to MCP clients."""
+
+    reachable: bool
+    is_ready: bool
+    state: str | None
+    robot_name: str | None
+    version: str | None
+    error: str | None
+
+
+def _build_status_result(raw: dict[str, Any]) -> DaemonStatusResult:
     """Reduce a raw daemon status payload to the fields a caller acts on."""
     state = raw.get("state")
     return {
@@ -27,7 +38,7 @@ def build_status_result(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def build_error_result(*, reachable: bool, error: str) -> dict[str, Any]:
+def _build_error_result(*, reachable: bool, error: str) -> DaemonStatusResult:
     """Build a status result for a failed lookup.
 
     ``reachable`` stays true when the daemon answered but the answer was
@@ -49,7 +60,7 @@ def create_server(settings: Settings) -> MCPServer:
     client = DaemonClient(settings)
 
     @mcp.tool()
-    async def get_daemon_status() -> dict[str, Any]:
+    async def get_daemon_status() -> DaemonStatusResult:
         """Check whether the Reachy Mini daemon is reachable and the robot is ready.
 
         Returns a dict with:
@@ -67,16 +78,16 @@ def create_server(settings: Settings) -> MCPServer:
         try:
             raw = await client.get_status()
         except DaemonUnreachableError as exc:
-            return build_error_result(
+            return _build_error_result(
                 reachable=False,
                 error=f"Daemon is not reachable: {exc}",
             )
         except DaemonResponseError as exc:
-            return build_error_result(
+            return _build_error_result(
                 reachable=True,
                 error=f"Daemon returned HTTP {exc.status_code}",
             )
 
-        return build_status_result(raw)
+        return _build_status_result(raw)
 
     return mcp

@@ -25,6 +25,14 @@ from reachy_mini_mcp.server import create_server
 
 STATUS_URL = f"{DEFAULT_BASE_URL}{STATUS_PATH}"
 CUSTOM_BASE_URL = "http://reachy.test:9000"
+STATUS_RESULT_FIELDS = {
+    "reachable",
+    "is_ready",
+    "state",
+    "robot_name",
+    "version",
+    "error",
+}
 
 
 def build_daemon_payload(state: str) -> dict:
@@ -51,6 +59,18 @@ async def call_daemon_status_tool(settings: Settings) -> dict[str, Any]:
 
 class TestGetDaemonStatus:
     """The MCP tool reporting daemon reachability and robot readiness."""
+
+    async def test_output_schema_describes_result_fields(self):
+        # Arrange
+        server = create_server(Settings())
+
+        # Act
+        tools = await server.list_tools()
+        status_tool = next(tool for tool in tools if tool.name == "get_daemon_status")
+
+        # Assert
+        assert set(status_tool.output_schema["properties"]) == STATUS_RESULT_FIELDS
+        assert set(status_tool.output_schema["required"]) == STATUS_RESULT_FIELDS
 
     @respx.mock
     async def test_running_daemon_is_ready(self):

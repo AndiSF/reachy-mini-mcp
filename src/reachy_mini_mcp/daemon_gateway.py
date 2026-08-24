@@ -5,11 +5,8 @@ daemon's HTTP endpoints so the MCP layer can stay free of transport concerns.
 """
 
 from __future__ import annotations
-
 from typing import Any
-
 import httpx
-
 from .config import Settings
 
 # Daemon REST API surface, fixed by the daemon rather than by configuration.

@@ -1,9 +1,7 @@
 """Tests for resolving server settings from the environment."""
 
 from __future__ import annotations
-
 import pytest
-
 from reachy_mini_mcp.config import (
     BASE_URL_ENV,
     DEFAULT_BASE_URL,

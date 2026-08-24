@@ -1,7 +1,6 @@
 """Tests for package metadata."""
 
 from importlib.metadata import version
-
 from reachy_mini_mcp import __version__
 
 PACKAGE_NAME = "reachy-mini-mcp"

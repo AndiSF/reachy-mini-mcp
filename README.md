@@ -11,8 +11,8 @@ Python SDK is deliberately not a dependency.
 
 Early work in progress. One tool is implemented:
 
-| Tool                | Purpose                                                  |
-| ------------------- | -------------------------------------------------------- |
+| Tool                | Purpose                                                    |
+| ------------------- | ---------------------------------------------------------- |
 | `get_daemon_status` | Report whether the daemon is reachable and the robot ready |
 
 ## Requirements
@@ -90,20 +90,22 @@ Both variables are optional.
 Set them in the `env` block of the server entry, next to `command` and `args`:
 
 ```json
-"reachy-mini": {
-  "command": "uv",
-  "args": ["--directory", "/absolute/path/to/reachy-mini-mcp", "run", "reachy-mini-mcp"],
-  "env": {
-    "REACHY_MINI_DAEMON_URL": "http://reachy.local:8000"
+{
+  "reachy-mini": {
+    "command": "uv",
+    "args": ["--directory", "/absolute/path/to/reachy-mini-mcp", "run", "reachy-mini-mcp"],
+    "env": {
+      "REACHY_MINI_DAEMON_URL": "http://reachy.local:8000"
+    }
   }
 }
 ```
 
 Exporting the variables in a shell is not enough. The client starts the server
-as a child process, often with a sanitised environment that drops them.
+as a child process, often with a sanitized environment that drops them.
 
 An invalid value is reported on stderr and the server exits with code 2 rather
-than starting with a setting it cannot honour. Clients write the server's
+than starting with a setting it cannot honor. Clients write the server's
 stderr to their own log file, which is where that message appears; the client
 UI itself usually reports no more than a failed start.
 
@@ -116,14 +118,14 @@ Defaults, variable names and their parsing all live in
 
 Takes no arguments. Returns:
 
-| Field        | Type            | Meaning                                                                                  |
-| ------------ | --------------- | ---------------------------------------------------------------------------------------- |
-| `reachable`  | `bool`          | The daemon process answered on its HTTP port                                             |
-| `is_ready`   | `bool`          | The robot backend is running and can accept commands                                     |
-| `state`      | `str \| null`   | `not_initialized`, `starting`, `running`, `stopping`, `stopped` or `error`                |
-| `robot_name` | `str \| null`   | Configured robot name                                                                    |
-| `version`    | `str \| null`   | Daemon version                                                                           |
-| `error`      | `str \| null`   | Error reported by the daemon, or by this lookup when it failed                            |
+| Field        | Type             | Meaning                                                                                  |
+| ------------ | ---------------- | ---------------------------------------------------------------------------------------- |
+| `reachable`  | `bool`           | The daemon process answered on its HTTP port                                             |
+| `is_ready`   | `bool`           | The robot backend is running and can accept commands                                     |
+| `state`      | `str \| null`    | `not_initialized`, `starting`, `running`, `stopping`, `stopped` or `error`               |
+| `robot_name` | `str \| null`    | Configured robot name                                                                    |
+| `version`    | `str \| null`    | Daemon version                                                                           |
+| `error`      | `str \| null`    | Error reported by the daemon, or by this lookup when it failed                           |
 
 `reachable` and `is_ready` are separate on purpose: the daemon process can be
 up and answering while the robot backend is stopped, in which case the robot
@@ -145,8 +147,9 @@ The tests mock the daemon's HTTP API, so no robot or running daemon is needed.
 
 ```
 src/reachy_mini_mcp/
+├── config.py     # environment variable parsing and validation
 ├── daemon.py     # async REST client for the daemon; knows nothing about MCP
-├── server.py     # FastMCP instance, tool definitions and result mapping
+├── server.py     # MCP server factory, tool definitions and result mapping
 └── __main__.py   # stdio entrypoint
 ```
 

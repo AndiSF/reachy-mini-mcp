@@ -1,5 +1,3 @@
-"""Tests for resolving server settings from the environment."""
-
 from __future__ import annotations
 import pytest
 from reachy_mini_mcp.config import (
@@ -12,8 +10,6 @@ from reachy_mini_mcp.config import (
 
 
 class TestSettingsFromEnv:
-    """Resolving settings from environment variables."""
-
     def test_uses_defaults_without_overrides(self, monkeypatch):
         # Arrange
         monkeypatch.delenv(BASE_URL_ENV, raising=False)

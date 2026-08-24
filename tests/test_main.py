@@ -1,5 +1,3 @@
-"""Tests for the stdio entrypoint."""
-
 from __future__ import annotations
 import pytest
 from reachy_mini_mcp.__main__ import CONFIG_ERROR_EXIT_CODE, main
@@ -7,8 +5,6 @@ from reachy_mini_mcp.config import TIMEOUT_ENV
 
 
 class TestMain:
-    """The stdio entrypoint."""
-
     def test_exits_with_config_error_on_stderr(self, monkeypatch, capsys):
         # Arrange
         monkeypatch.setenv(TIMEOUT_ENV, "soon")

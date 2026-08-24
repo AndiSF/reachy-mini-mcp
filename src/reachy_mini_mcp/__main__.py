@@ -19,8 +19,8 @@ def main() -> None:
         )
         raise SystemExit(CONFIG_ERROR_EXIT_CODE) from exc
 
-    mcp = create_server(settings)
-    mcp.run(transport="stdio")
+    mcp_server = create_server(settings)
+    mcp_server.run(transport="stdio")
 
 
 if __name__ == "__main__":

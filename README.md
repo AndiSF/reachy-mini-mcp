@@ -75,7 +75,7 @@ working directory is passed to `uv` instead:
 
 Keep any client-side timeout above `REACHY_MINI_TIMEOUT` (see below). The
 server is then the one that gives up first, so an unresponsive daemon comes
-back as a `reachable: false` result the client can explain, rather than as a
+back as an `is_reachable: false` result the client can explain, rather than as a
 timeout the client cannot attribute.
 
 ## Configuration
@@ -122,21 +122,21 @@ Defaults, variable names and their parsing all live in
 
 Takes no arguments. Returns:
 
-| Field        | Type             | Meaning                                                                                  |
-| ------------ | ---------------- | ---------------------------------------------------------------------------------------- |
-| `reachable`  | `bool`           | The daemon process answered on its HTTP port                                             |
-| `is_ready`   | `bool`           | The robot backend is running and can accept commands                                     |
-| `state`      | `str \| null`    | `not_initialized`, `starting`, `running`, `stopping`, `stopped` or `error`               |
-| `robot_name` | `str \| null`    | Configured robot name                                                                    |
-| `version`    | `str \| null`    | Daemon version                                                                           |
-| `error`      | `str \| null`    | Error reported by the daemon, or by this lookup when it failed                           |
+| Field          | Type             | Meaning                                                                                  |
+| -------------- | ---------------- | ---------------------------------------------------------------------------------------- |
+| `is_reachable` | `bool`           | The daemon process answered on its HTTP port                                             |
+| `is_ready`     | `bool`           | The robot backend is running and can accept commands                                     |
+| `state`        | `str \| null`    | `not_initialized`, `starting`, `running`, `stopping`, `stopped` or `error`               |
+| `robot_name`   | `str \| null`    | Configured robot name                                                                    |
+| `version`      | `str \| null`    | Daemon version                                                                           |
+| `error`        | `str \| null`    | Error reported by the daemon, or by this lookup when it failed                           |
 
-`reachable` and `is_ready` are separate on purpose: the daemon process can be
+`is_reachable` and `is_ready` are separate on purpose: the daemon process can be
 up and answering while the robot backend is stopped, in which case the robot
 will not move until the backend is started.
 
-An unreachable daemon is reported as `reachable: false` with an `error` message
-instead of raising, so the client can relay the situation to the user.
+An unreachable daemon is reported as `is_reachable: false` with an `error`
+message instead of raising, so the client can relay the situation to the user.
 
 ## Development
 

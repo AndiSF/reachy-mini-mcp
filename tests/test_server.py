@@ -10,7 +10,7 @@ from reachy_mini_mcp.server import create_server
 STATUS_URL = f"{DEFAULT_BASE_URL}{STATUS_PATH}"
 CUSTOM_BASE_URL = "http://reachy.test:9000"
 STATUS_RESULT_FIELDS = {
-    "reachable",
+    "is_reachable",
     "is_ready",
     "state",
     "robot_name",
@@ -69,7 +69,7 @@ class TestGetDaemonStatus:
         result = await call_daemon_status_tool(Settings())
 
         # Assert
-        assert result["reachable"] is True
+        assert result["is_reachable"] is True
         assert result["is_ready"] is True
         assert result["state"] == "running"
         assert result["robot_name"] == "reachy_mini"
@@ -90,7 +90,7 @@ class TestGetDaemonStatus:
         result = await call_daemon_status_tool(Settings())
 
         # Assert
-        assert result["reachable"] is True
+        assert result["is_reachable"] is True
         assert result["is_ready"] is False
         assert result["state"] == "stopped"
 
@@ -103,7 +103,7 @@ class TestGetDaemonStatus:
         result = await call_daemon_status_tool(Settings())
 
         # Assert
-        assert result["reachable"] is False
+        assert result["is_reachable"] is False
         assert result["is_ready"] is False
         assert result["state"] is None
         assert "not reachable" in result["error"]
@@ -117,7 +117,7 @@ class TestGetDaemonStatus:
         result = await call_daemon_status_tool(Settings())
 
         # Assert
-        assert result["reachable"] is True
+        assert result["is_reachable"] is True
         assert result["is_ready"] is False
         assert result["error"] == "Daemon returned HTTP 500"
 

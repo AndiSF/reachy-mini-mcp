@@ -13,7 +13,7 @@ READY_STATE = "running"
 
 
 class DaemonStatusResult(TypedDict):
-    reachable: bool
+    is_reachable: bool
     is_ready: bool
     state: str | None
     robot_name: str | None
@@ -26,7 +26,7 @@ def _build_status_result(
 ) -> DaemonStatusResult:
     state = daemon_status_payload.get("state")
     return {
-        "reachable": True,
+        "is_reachable": True,
         "is_ready": state == READY_STATE,
         "state": state,
         "robot_name": daemon_status_payload.get("robot_name"),
@@ -35,9 +35,9 @@ def _build_status_result(
     }
 
 
-def _build_error_result(*, reachable: bool, error: str) -> DaemonStatusResult:
+def _build_error_result(*, is_reachable: bool, error: str) -> DaemonStatusResult:
     return {
-        "reachable": reachable,
+        "is_reachable": is_reachable,
         "is_ready": False,
         "state": None,
         "robot_name": None,
@@ -47,25 +47,25 @@ def _build_error_result(*, reachable: bool, error: str) -> DaemonStatusResult:
 
 
 def create_server(settings: Settings) -> MCPServer:
-    mcp = MCPServer(SERVER_NAME, version=__version__)
+    mcp_server = MCPServer(SERVER_NAME, version=__version__)
     gateway = DaemonGateway(settings)
 
-    @mcp.tool()
+    @mcp_server.tool()
     async def get_daemon_status() -> DaemonStatusResult:
         """Check Reachy Mini daemon reachability and robot backend readiness."""
         try:
             daemon_status_payload = await gateway.get_status()
         except DaemonUnreachableError as exc:
             return _build_error_result(
-                reachable=False,
+                is_reachable=False,
                 error=f"Daemon is not reachable: {exc}",
             )
         except DaemonResponseError as exc:
             return _build_error_result(
-                reachable=True,
+                is_reachable=True,
                 error=f"Daemon returned HTTP {exc.status_code}",
             )
 
         return _build_status_result(daemon_status_payload)
 
-    return mcp
+    return mcp_server

@@ -1,5 +1,3 @@
-"""Tests for the daemon status MCP tool."""
-
 from __future__ import annotations
 from typing import Any
 import httpx
@@ -21,8 +19,7 @@ STATUS_RESULT_FIELDS = {
 }
 
 
-def build_daemon_payload(state: str) -> dict:
-    """Return a daemon status payload as the real daemon v1.9.0 sends it."""
+def build_daemon_status_payload(state: str) -> dict:
     return {
         "type": "daemon_status",
         "robot_name": "reachy_mini",
@@ -36,7 +33,6 @@ def build_daemon_payload(state: str) -> dict:
 
 
 async def call_daemon_status_tool(settings: Settings) -> dict[str, Any]:
-    """Call the daemon status tool through its public MCP interface."""
     server = create_server(settings)
     result = await server.call_tool("get_daemon_status", {})
     assert isinstance(result, CallToolResult)
@@ -45,8 +41,6 @@ async def call_daemon_status_tool(settings: Settings) -> dict[str, Any]:
 
 
 class TestGetDaemonStatus:
-    """The MCP tool reporting daemon reachability and robot readiness."""
-
     async def test_output_schema_describes_result_fields(self):
         # Arrange
         server = create_server(Settings())
@@ -65,7 +59,10 @@ class TestGetDaemonStatus:
     async def test_running_daemon_is_ready(self):
         # Arrange
         respx.get(STATUS_URL).mock(
-            return_value=httpx.Response(200, json=build_daemon_payload("running"))
+            return_value=httpx.Response(
+                200,
+                json=build_daemon_status_payload("running"),
+            )
         )
 
         # Act
@@ -83,7 +80,10 @@ class TestGetDaemonStatus:
     async def test_stopped_daemon_is_not_ready(self):
         # Arrange
         respx.get(STATUS_URL).mock(
-            return_value=httpx.Response(200, json=build_daemon_payload("stopped"))
+            return_value=httpx.Response(
+                200,
+                json=build_daemon_status_payload("stopped"),
+            )
         )
 
         # Act
@@ -128,7 +128,7 @@ class TestGetDaemonStatus:
         route = respx.get(f"{CUSTOM_BASE_URL}{STATUS_PATH}").mock(
             return_value=httpx.Response(
                 200,
-                json=build_daemon_payload("running"),
+                json=build_daemon_status_payload("running"),
             )
         )
 

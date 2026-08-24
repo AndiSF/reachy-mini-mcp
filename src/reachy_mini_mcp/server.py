@@ -8,7 +8,11 @@ from mcp.server.mcpserver import MCPServer
 
 from . import __version__
 from .config import SERVER_NAME, Settings
-from .daemon import DaemonClient, DaemonResponseError, DaemonUnreachableError
+from .daemon_gateway import (
+    DaemonGateway,
+    DaemonResponseError,
+    DaemonUnreachableError,
+)
 
 # The daemon reports this state once the robot backend is fully operational.
 READY_STATE = "running"
@@ -57,7 +61,7 @@ def _build_error_result(*, reachable: bool, error: str) -> DaemonStatusResult:
 def create_server(settings: Settings) -> MCPServer:
     """Create an MCP server configured for one daemon."""
     mcp = MCPServer(SERVER_NAME, version=__version__)
-    client = DaemonClient(settings)
+    gateway = DaemonGateway(settings)
 
     @mcp.tool()
     async def get_daemon_status() -> DaemonStatusResult:
@@ -76,7 +80,7 @@ def create_server(settings: Settings) -> MCPServer:
         robot backend is stopped; the robot will not move until it is started.
         """
         try:
-            raw = await client.get_status()
+            raw = await gateway.get_status()
         except DaemonUnreachableError as exc:
             return _build_error_result(
                 reachable=False,

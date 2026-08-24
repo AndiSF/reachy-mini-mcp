@@ -151,10 +151,10 @@ The tests mock the daemon's HTTP API, so no robot or running daemon is needed.
 
 ```
 src/reachy_mini_mcp/
-├── config.py     # environment variable parsing and validation
-├── daemon.py     # async REST client for the daemon; knows nothing about MCP
-├── server.py     # MCP server factory, tool definitions and result mapping
-└── __main__.py   # stdio entrypoint
+├── config.py          # environment variable parsing and validation
+├── daemon_gateway.py  # gateway to the daemon REST API; knows nothing about MCP
+├── server.py          # MCP server factory, tool definitions and result mapping
+└── __main__.py        # stdio entrypoint
 ```
 
 ## License

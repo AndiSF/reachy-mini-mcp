@@ -87,6 +87,10 @@ Both variables are optional.
 | `REACHY_MINI_DAEMON_URL`  | `http://localhost:8000` | Base URL of the daemon REST API  |
 | `REACHY_MINI_TIMEOUT`     | `5.0`                   | HTTP request timeout in seconds  |
 
+The daemon URL must be an absolute HTTP or HTTPS origin with a host and an
+optional port. Credentials, non-root paths, query strings, and fragments are
+not accepted.
+
 Set them in the `env` block of the server entry, next to `command` and `args`:
 
 ```json

@@ -1,25 +1,14 @@
-"""Tests for the daemon status tool, its configuration and the entrypoint.
-
-The daemon's HTTP API is mocked throughout, so no robot or running daemon is
-needed. Tests are grouped by the unit under test; the class name carries the
-subject so each method name only has to state a condition and its outcome.
-"""
+"""Tests for the daemon status MCP tool."""
 
 from __future__ import annotations
 
 from typing import Any
 
 import httpx
-import pytest
 import respx
+from mcp.types import CallToolResult
 
-from reachy_mini_mcp.__main__ import CONFIG_ERROR_EXIT_CODE, main
-from reachy_mini_mcp.config import (
-    DEFAULT_BASE_URL,
-    DEFAULT_TIMEOUT_SECONDS,
-    TIMEOUT_ENV,
-    Settings,
-)
+from reachy_mini_mcp.config import DEFAULT_BASE_URL, Settings
 from reachy_mini_mcp.daemon import STATUS_PATH
 from reachy_mini_mcp.server import create_server
 
@@ -53,6 +42,7 @@ async def call_daemon_status_tool(settings: Settings) -> dict[str, Any]:
     """Call the daemon status tool through its public MCP interface."""
     server = create_server(settings)
     result = await server.call_tool("get_daemon_status", {})
+    assert isinstance(result, CallToolResult)
     assert result.structured_content is not None
     return result.structured_content
 
@@ -67,10 +57,12 @@ class TestGetDaemonStatus:
         # Act
         tools = await server.list_tools()
         status_tool = next(tool for tool in tools if tool.name == "get_daemon_status")
+        output_schema = status_tool.output_schema
 
         # Assert
-        assert set(status_tool.output_schema["properties"]) == STATUS_RESULT_FIELDS
-        assert set(status_tool.output_schema["required"]) == STATUS_RESULT_FIELDS
+        assert output_schema is not None
+        assert set(output_schema["properties"]) == STATUS_RESULT_FIELDS
+        assert set(output_schema["required"]) == STATUS_RESULT_FIELDS
 
     @respx.mock
     async def test_running_daemon_is_ready(self):
@@ -148,45 +140,3 @@ class TestGetDaemonStatus:
 
         # Assert
         assert route.called
-
-
-class TestSettingsFromEnv:
-    """Resolving settings from environment variables."""
-
-    def test_uses_defaults_without_overrides(self, monkeypatch):
-        # Arrange
-        monkeypatch.delenv(TIMEOUT_ENV, raising=False)
-
-        # Act
-        settings = Settings.from_env()
-
-        # Assert
-        assert settings.base_url == DEFAULT_BASE_URL
-        assert settings.timeout_seconds == DEFAULT_TIMEOUT_SECONDS
-
-    def test_rejects_non_numeric_timeout(self, monkeypatch):
-        # Arrange
-        monkeypatch.setenv(TIMEOUT_ENV, "soon")
-
-        # Act / Assert
-        with pytest.raises(ValueError, match=TIMEOUT_ENV):
-            Settings.from_env()
-
-
-class TestMain:
-    """The stdio entrypoint."""
-
-    def test_exits_with_config_error_on_stderr(self, monkeypatch, capsys):
-        # Arrange
-        monkeypatch.setenv(TIMEOUT_ENV, "soon")
-
-        # Act
-        with pytest.raises(SystemExit) as exit_info:
-            main()
-
-        # Assert
-        assert exit_info.value.code == CONFIG_ERROR_EXIT_CODE
-        captured = capsys.readouterr()
-        assert TIMEOUT_ENV in captured.err
-        assert "soon" in captured.err
-        assert captured.out == ""

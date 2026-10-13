@@ -145,7 +145,41 @@ uv sync          # install dependencies, including the dev group
 uv run pytest    # run the test suite
 ```
 
-The tests mock the daemon's HTTP API, so no robot or running daemon is needed.
+The unit tests mock the daemon's HTTP API, so no robot or running daemon is needed.
+
+### Integration test with MuJoCo
+
+The integration test is skipped by default. It uses the actual MCP stdio protocol
+to check `get_daemon_status` against a running MuJoCo simulator, and verifies that
+the daemon uses simulation rather than the mockup backend. It does not start or
+stop the simulator, and an unavailable or unready simulator fails the opted-in test.
+
+First, in the separate `reachy-mini-sim` checkout, install its dependencies with
+`uv sync` and start the daemon:
+
+```bash
+uv run reachy-mini-daemon --sim --headless --no-media
+```
+
+On macOS, use MuJoCo's launcher instead:
+
+```bash
+uv run mjpython -m reachy_mini.daemon.app.main --sim --headless --no-media
+```
+
+Wait until the simulator is running. Then, in `reachy-mini-mcp`, run only the
+integration test or include it with the unit tests:
+
+```bash
+uv run pytest --run-integration -m integration
+uv run pytest --run-integration
+```
+
+The default daemon URL is `http://localhost:8000`. To use another host or port,
+set `REACHY_MINI_DAEMON_URL` in your shell before running pytest. The test passes
+this setting and `REACHY_MINI_TIMEOUT` to the MCP subprocess explicitly.
+It launches the server with pytest's Python interpreter, so the test works on
+Linux, Windows, and macOS without platform-specific executable paths.
 
 ## Layout
 

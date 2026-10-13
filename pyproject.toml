@@ -32,6 +32,9 @@ packages = ["src/reachy_mini_mcp"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "integration: requires a running Reachy Mini MuJoCo simulator",
+]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "N", "UP", "ANN", "B", "SIM", "PT", "PL", "RUF"]

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any
 import httpx
+import pytest
 import respx
 from mcp.types import CallToolResult
 from reachy_mini_mcp.config import DEFAULT_BASE_URL, Settings
@@ -41,6 +42,17 @@ async def call_daemon_status_tool(settings: Settings) -> dict[str, Any]:
 
 
 class TestGetDaemonStatus:
+    @pytest.mark.parametrize("payload", ["not JSON", "[]"])
+    @respx.mock
+    async def test_invalid_payload_reports_reachable_but_not_ready(self, payload):
+        respx.get(STATUS_URL).respond(200, text=payload)
+
+        result = await call_daemon_status_tool(Settings())
+
+        assert result["is_reachable"] is True
+        assert result["is_ready"] is False
+        assert result["error"] is not None
+
     async def test_output_schema_describes_result_fields(self):
         # Arrange
         server = create_server(Settings())

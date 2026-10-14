@@ -9,11 +9,14 @@ Python SDK is deliberately not a dependency.
 
 ## Status
 
-Early work in progress. One tool is implemented:
+Early work in progress. Four tools are implemented:
 
 | Tool                | Purpose                                                    |
 | ------------------- | ---------------------------------------------------------- |
 | `get_daemon_status` | Report whether the daemon is reachable and the robot ready |
+| `start_daemon` | Start the robot backend, optionally with the wake-up motion |
+| `stop_daemon` | Stop the robot backend, optionally with the sleep motion |
+| `restart_daemon` | Reinitialize the robot backend with its previous start settings |
 
 ## Requirements
 
@@ -137,6 +140,49 @@ will not move until the backend is started.
 
 An unreachable daemon is reported as `is_reachable: false` with an `error`
 message instead of raising, so the client can relay the situation to the user.
+
+### `start_daemon`, `stop_daemon`, `restart_daemon`
+
+These tools submit background jobs to the daemon REST API:
+
+| Tool | Endpoint | Required arguments |
+| ---- | -------- | ------------------ |
+| `start_daemon` | `POST /api/daemon/start` | `wake_up: bool` |
+| `stop_daemon` | `POST /api/daemon/stop` | `goto_sleep: bool` |
+| `restart_daemon` | `POST /api/daemon/restart` | None |
+
+The start and stop flags are sent as query parameters, as required by the API.
+They have no defaults: the caller must explicitly choose whether to request
+the wake-up or sleep motion. For example, `start_daemon(wake_up=false)` starts
+the backend without requesting the wake-up motion.
+
+Start and stop control the robot backend; the daemon's HTTP API stays available.
+In daemon v1.9.0, restart stops and starts the backend using its previous
+settings, including the simulation mode, serial port, scene and media setting.
+It does not restart the HTTP server or the computer, and does not request the
+sleep or wake-up motions. This does not guarantee that no physical movement
+occurs during reinitialization. An already stopped backend stays stopped when
+restart is requested; use `start_daemon` to start it.
+
+All three tools return the same fields:
+
+| Field | Type | Meaning |
+| ----- | ---- | ------- |
+| `accepted` | `bool \| null` | `true`: job accepted; `false`: request rejected; `null`: acceptance could not be determined |
+| `job_id` | `str \| null` | Background job ID returned by the daemon, when confirmed |
+| `error` | `str \| null` | Request error or explanation of the uncertain outcome |
+
+An accepted job has **not necessarily completed or succeeded**. Use
+`get_daemon_status` to inspect the backend state afterward: start normally leads
+to `running`, stop to `stopped`, and restart returns an active backend to
+`running`. The backend can also report `error`. A single status snapshot,
+especially `running` immediately after a restart request, does not prove that
+the submitted job has completed. These tools do not wait for job completion.
+
+HTTP 409 means the daemon is busy and rejected the command. Transport failures,
+timeouts, server errors or invalid success responses leave acceptance unknown:
+the daemon may already have started the operation. Commands are never
+automatically retried. Check the state before deciding whether to retry.
 
 ## Development
 

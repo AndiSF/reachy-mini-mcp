@@ -9,7 +9,7 @@ Python SDK is deliberately not a dependency.
 
 ## Status
 
-Early work in progress. Four tools are implemented:
+Early work in progress. Seven tools are implemented:
 
 | Tool                | Purpose                                                    |
 | ------------------- | ---------------------------------------------------------- |
@@ -17,6 +17,9 @@ Early work in progress. Four tools are implemented:
 | `start_daemon` | Start the robot backend, optionally with the wake-up motion |
 | `stop_daemon` | Stop the robot backend, optionally with the sleep motion |
 | `restart_daemon` | Reinitialize the robot backend with its previous start settings |
+| `upload_sound` | Upload an audio file from the MCP host to temporary daemon storage |
+| `play_sound` | Request sound-file playback through the robot speaker |
+| `stop_sound` | Request stopping sound-file playback |
 
 ## Requirements
 
@@ -77,9 +80,9 @@ working directory is passed to `uv` instead:
 ```
 
 Keep any client-side timeout above `REACHY_MINI_TIMEOUT` (see below). The
-server is then the one that gives up first, so an unresponsive daemon comes
-back as an `is_reachable: false` result the client can explain, rather than as a
-timeout the client cannot attribute.
+server is then the one that gives up first and returns a structured error:
+`is_reachable: false` for status, or an unknown outcome for commands whose
+response was lost.
 
 ## Configuration
 
@@ -184,14 +187,112 @@ timeouts, server errors or invalid success responses leave acceptance unknown:
 the daemon may already have started the operation. Commands are never
 automatically retried. Check the state before deciding whether to retry.
 
+### Audio output: `upload_sound`, `play_sound`, `stop_sound`
+
+Speech synthesis stays outside this MCP server. An agent uses its own TTS
+component to generate an audio file on the **machine running the MCP server**,
+uploads it, and requests playback through Reachy Mini's speaker:
+
+```text
+External TTS -> MCP-host audio file -> upload_sound -> play_sound -> robot speaker
+```
+
+| Tool | Endpoint | Required arguments |
+| ---- | -------- | ------------------ |
+| `upload_sound` | `POST /api/media/sounds/upload` | `file_path: str`, an absolute local path on the MCP host |
+| `play_sound` | `POST /api/media/play_sound` | `file: str`, a nonempty daemon-side reference |
+| `stop_sound` | `POST /api/media/stop_sound` | None |
+
+`upload_sound` reads an existing regular file without modifying or deleting it.
+A URL, base64 payload, browser attachment identifier, or a path on a remote
+client's computer is not an upload source. Supported extensions are `.wav`,
+`.mp3`, `.ogg`, `.oga`, `.opus`, `.flac`, `.m4a`, and `.aac`, case-insensitively.
+Files larger than 25 MiB are rejected locally before any HTTP request. File
+reads run outside the async event loop and are bounded to the upload limit.
+The file bytes are sent as multipart field `file`, using only the basename;
+the daemon validates the actual audio content.
+
+The upload result is:
+
+| Field | Type | Meaning |
+| ----- | ---- | ------- |
+| `uploaded` | `bool \| null` | `true`: upload confirmed; `false`: local validation failed or the daemon rejected it; `null`: upload outcome unknown |
+| `file` | `str \| null` | Daemon-side path, returned only on confirmed success, for use with `play_sound` |
+| `error` | `str \| null` | Failure or uncertain-outcome explanation |
+
+The daemon stores uploads temporarily (v1.9.0 uses `/tmp/reachy_mini_sounds`).
+**An upload with the same basename can overwrite an earlier upload.** Use unique
+filenames for generated speech. This increment does not list, delete, or clean
+up uploaded files; operators must manage temporary storage separately.
+
+Example MCP tool arguments and structured results (paths are illustrative):
+
+```text
+upload_sound({"file_path": "/srv/tts/speech-a71f.wav"})
+-> {"uploaded": true, "file": "/tmp/reachy_mini_sounds/speech-a71f.wav", "error": null}
+
+play_sound({"file": "/tmp/reachy_mini_sounds/speech-a71f.wav"})
+-> {"accepted": true, "error": null}
+
+stop_sound({})
+-> {"accepted": true, "error": null}
+```
+
+Prefer the `file` returned by `upload_sound` for playback. The daemon also
+accepts its own local paths, built-in sound names, and uploaded filenames.
+These refer to the **daemon's filesystem**, which can differ from the MCP host's
+filesystem. `play_sound` sends JSON `{"file": "..."}`; it does not upload a file.
+`stop_sound` sends a POST with no request body.
+
+Playback and stopping return:
+
+| Field | Type | Meaning |
+| ----- | ---- | ------- |
+| `accepted` | `bool \| null` | `true`: API accepted the request; `false`: validation failed or request rejected; `null`: acceptance unknown |
+| `error` | `str \| null` | Failure or uncertain-outcome explanation |
+
+`accepted: true` confirms API acceptance only. It does **not** prove audible
+playback, successful interruption, or completion. Audio tools do not return
+background job IDs or expose a playback-completion endpoint. `get_daemon_status`
+can check backend readiness, but cannot confirm playback completion.
+
+Both `play_sound` and `stop_sound` require a ready robot backend. The documented
+HTTP 503 `Backend not running` response is a rejection; these tools never start
+the backend automatically. `stop_sound` stops sound-file playback; it does not
+stop the backend or clear every streaming-audio queue. Audio tools do not change
+volume or enable motion, tracking, or wobbling.
+
+HTTP 4xx rejections are failures and include the status code. Timeouts,
+connection errors, ambiguous server failures, and malformed success responses
+leave the outcome unknown (`null`): the effect may already have occurred.
+There are no automatic retries; retrying playback could speak twice. All three
+tools are annotated as side-effecting and unsuitable for safe automatic replay.
+
+### Manual audio acceptance checklist
+
+Run these steps separately with an operator present; automated tests do not
+perform hardware actions:
+
+1. With the robot ready, place a short externally generated WAV on the MCP host.
+2. Call `upload_sound` and capture its confirmed daemon-side `file` reference.
+3. Call `play_sound` with that reference and have the operator confirm sound
+   comes from the robot speaker, not the computer speaker.
+4. Upload and play a longer clip; verify `stop_sound` interrupts it.
+5. With the backend stopped, verify `play_sound` returns a clear
+   `Backend not running` error and leaves the backend stopped.
+
 ## Development
 
 ```bash
-uv sync          # install dependencies, including the dev group
-uv run pytest    # run the test suite
+uv sync --locked
+uv run --locked ruff check .
+uv run --locked ruff format --check .
+uv run --locked pytest
 ```
 
 The unit tests mock the daemon's HTTP API, so no robot or running daemon is needed.
+Audio tests use temporary files and mocked HTTP; they do not validate physical
+speaker output or use an external TTS service.
 
 ### Integration test with MuJoCo
 

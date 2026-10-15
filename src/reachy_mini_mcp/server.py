@@ -11,6 +11,7 @@ from .daemon_gateway import (
     DaemonPayloadError,
     DaemonResponseError,
     DaemonUnreachableError,
+    SoundValidationError,
 )
 
 READY_STATE = "running"
@@ -31,6 +32,43 @@ class DaemonCommandResult(TypedDict):
     accepted: bool | None
     job_id: str | None
     error: str | None
+
+
+class SoundUploadResult(TypedDict):
+    uploaded: bool | None
+    file: str | None
+    error: str | None
+
+
+class SoundActionResult(TypedDict):
+    accepted: bool | None
+    error: str | None
+
+
+async def _run_audio_operation(
+    operation: Awaitable[str | None],
+) -> tuple[bool | None, str | None, str | None]:
+    """Return confirmation, optional uploaded reference, and a safe error."""
+    try:
+        file = await operation
+    except SoundValidationError as exc:
+        return False, None, str(exc)
+    except DaemonResponseError as exc:
+        error = f"Daemon returned HTTP {exc.status_code}"
+        if exc.backend_not_running:
+            return False, None, f"{error}: Backend not running"
+        if HTTPStatus.BAD_REQUEST <= exc.status_code < HTTPStatus.INTERNAL_SERVER_ERROR:
+            return False, None, error
+    except (DaemonUnreachableError, DaemonPayloadError) as exc:
+        error = str(exc)
+    else:
+        return True, file, None
+    return (
+        None,
+        None,
+        f"Could not confirm audio operation: {error}. "
+        "The operation may already have occurred. Do not automatically retry.",
+    )
 
 
 async def _run_daemon_command(command: Awaitable[str]) -> DaemonCommandResult:
@@ -139,5 +177,40 @@ def create_server(settings: Settings) -> MCPServer:
         the state. Do not automatically retry an uncertain result.
         """
         return await _run_daemon_command(gateway.restart())
+
+    @mcp_server.tool(annotations=command_annotations)
+    async def upload_sound(file_path: str) -> SoundUploadResult:
+        """Upload an absolute MCP-host audio path, at most 25 MiB, to the daemon.
+
+        Returns file only on confirmed success; pass it to play_sound. The source
+        is preserved. Daemon storage is temporary; matching basenames overwrite
+        earlier uploads, so use unique filenames. TTS is external. An unknown
+        outcome must not be automatically retried.
+        """
+        uploaded, file, error = await _run_audio_operation(
+            gateway.upload_sound(file_path)
+        )
+        return {"uploaded": uploaded, "file": file, "error": error}
+
+    @mcp_server.tool(annotations=command_annotations)
+    async def play_sound(file: str) -> SoundActionResult:
+        """Request speaker playback using a daemon-side file reference.
+
+        Prefer file from upload_sound; daemon-local paths, built-in names and
+        uploaded filenames also work. Requires a ready backend. Acceptance does
+        not confirm audible playback or completion. No automatic retries.
+        """
+        accepted, _, error = await _run_audio_operation(gateway.play_sound(file))
+        return {"accepted": accepted, "error": error}
+
+    @mcp_server.tool(annotations=command_annotations)
+    async def stop_sound() -> SoundActionResult:
+        """Request stopping sound-file playback on a ready backend.
+
+        Does not stop the backend or clear streaming-audio queues. Acceptance
+        does not confirm completion. No automatic retries.
+        """
+        accepted, _, error = await _run_audio_operation(gateway.stop_sound())
+        return {"accepted": accepted, "error": error}
 
     return mcp_server
